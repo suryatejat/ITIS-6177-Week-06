@@ -18,16 +18,15 @@ const pool = mariadb.createPool({
 
 app.use(express.json());
 
-// Middleware to handle database connection
-app.use(async (req, res, next) => {
+// Function to get a new database connection
+async function getDbConnection() {
   try {
-    req.db = await pool.getConnection();
-    next();
+    return await pool.getConnection();
   } catch (err) {
     console.error('Database connection error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    throw new Error('Internal server error');
   }
-});
+}
 
 // Swagger configuration
 const swaggerOptions = {
@@ -78,6 +77,7 @@ app.post('/api/foods', [
   body('itemName').trim().isLength({ min: 1, max: 25 }).escape(),
   body('itemUnit').trim().isLength({ min: 1, max: 5 }).escape(),
 ], async (req, res) => {
+  req.db = await getDbConnection();
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -134,6 +134,7 @@ app.patch('/api/foods/:itemId', [
   body('itemName').optional().trim().isLength({ min: 1, max: 25 }).escape(),
   body('itemUnit').optional().trim().isLength({ min: 1, max: 5 }).escape(),
 ], async (req, res) => {
+  req.db = await getDbConnection();
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -214,6 +215,7 @@ app.put('/api/foods/:itemId', [
   body('itemName').trim().isLength({ min: 1, max: 25 }).escape(),
   body('itemUnit').trim().isLength({ min: 1, max: 5 }).escape(),
 ], async (req, res) => {
+  req.db = await getDbConnection();
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -260,6 +262,7 @@ app.put('/api/foods/:itemId', [
  */
 app.get('/api/customers', async (req, res) => {
   try {
+    req.db = await getDbConnection();
     const rows = await req.db.query('SELECT CUST_NAME FROM customer');
     const customerNames = rows.map(row => row.CUST_NAME);
     res.json({ customerList: customerNames });
@@ -291,6 +294,7 @@ app.get('/api/customers', async (req, res) => {
  */
 app.get('/api/students', async (req, res) => {
   try {
+    req.db = await getDbConnection();
     const rows = await req.db.query('SELECT NAME FROM student');
     const studentNames = rows.map(row => row.ITEM_NAME);
     res.json({ studentList: studentNames });
@@ -322,6 +326,7 @@ app.get('/api/students', async (req, res) => {
  */
 app.get('/api/foods', async (req, res) => {
   try {
+    req.db = await getDbConnection();
     const rows = await req.db.query('SELECT ITEM_NAME FROM foods');
     const customerNames = rows.map(row => row.ITEM_NAME);
     res.json({ foodList: customerNames });
@@ -353,6 +358,7 @@ app.get('/api/foods', async (req, res) => {
 app.delete('/api/customers/:custCode', [
   param('custCode').isLength({ min: 6, max: 6 }).withMessage('Customer code must be 6 characters long'),
 ], async (req, res) => {
+  req.db = await getDbConnection();
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
