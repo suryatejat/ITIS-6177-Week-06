@@ -4,7 +4,8 @@ const port = 3000;
 const mariadb = require("mariadb");
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
-const { body, param, validationResult } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
+const axios = require('axios');
 
 const pool = mariadb.createPool({
   host: 'localhost',
@@ -379,6 +380,36 @@ app.delete('/api/customers/:custCode', [
     req.db.release();
   }
 });
+
+app.get(
+  '/say',
+  [
+    // Validation
+    query('keyword')
+      .exists().withMessage('Missing keyword query parameter')
+      .isString().withMessage('Keyword must be a string')
+      .trim() // Transformation: Remove surrounding whitespace
+      .escape() // Sanitization: Escape potentially dangerous characters
+      .isLength({ min: 1, max: 50 }).withMessage('Keyword length must be between 1 and 50 characters')
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const keyword = req.query.keyword;
+
+    try {
+      const response = await axios.get('https://us-central1-assignment07-437815.cloudfunctions.net/my-function', {
+        params: { param: keyword }
+      });
+      res.status(200).json(response.data);
+    } catch (error) {
+      console.error('Error calling function:', error.message);
+    }
+  }
+);
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
